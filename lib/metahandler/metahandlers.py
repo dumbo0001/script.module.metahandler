@@ -34,8 +34,8 @@ from thetvdbapi import TheTVDB
 import xbmc
 import xbmcvfs
 
-''' Use addon.common library for http calls '''
-from addon.common.net import Net
+''' Use t0mm0.common library for http calls '''
+from t0mm0.common.net import Net
 net = Net()
 
 sys.path.append((os.path.split(common.addon_path))[0])
