@@ -27,6 +27,8 @@ class TMDB(object):
     First call is made to TMDB by either IMDB ID or Name/Year depending on what is supplied. If movie is not found
     or if there is data missing on TMDB, another call is made to IMDB to fill in the missing information.       
     '''  
+
+    _default_encoding = 'utf-8'
     
     def __init__(self, api_key='', view='json', lang='en'):
         #view = yaml json xml
@@ -157,7 +159,7 @@ class TMDB(object):
         if imdb_id:
             url = self.imdb_api % imdb_id
         else:
-            name = urllib.quote(name)
+            name = urllib.quote(name.encode(self._default_encoding))
             if year:
                 url = self.imdb_nameyear_api % (name, year)
             else:
@@ -303,7 +305,7 @@ class TMDB(object):
 
     def _search_movie(self, name, year=''):
         ''' Helper method to start a TMDB Movie.search request - search by Name/Year '''
-        name = urllib.quote(self.__clean_name(name))
+        name = urllib.quote(name.encode(self._default_encoding))
         if year:
             name = name + '&year=' + year
         return self._do_request('search/movie','query='+name)
@@ -339,7 +341,7 @@ class TMDB(object):
         Returns:
             DICT of matches
         '''
-        return self._do_request_all('search/movie','query='+urllib.quote(name))
+        return self._do_request_all('search/movie','query='+urllib.quote(name.encode(self._default_encoding)))
         
         
     def tmdb_lookup(self, name, imdb_id='', tmdb_id='', year=''):
