@@ -923,7 +923,6 @@ class MetaData:
         '''
        
         common.addon.log('---------------------------------------------------------------------------------------', 2)
-        common.addon.log(type(name))
         if type(name) != type(u''):
             name = name.decode(self._default_encoding, 'ignore')
         common.addon.log('Attempting to retrieve meta data for %s: %s %s %s %s' % (media_type, name.encode(self._default_encoding), year, imdb_id, tmdb_id), 2)
