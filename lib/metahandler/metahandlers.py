@@ -91,7 +91,6 @@ class MetaData:
         - Store/Retrieve meta from cache DB
         - Download image files locally
     '''  
-    _default_encoding = 'utf-8'
 
      
     def __init__(self, prepack_images=False, preparezip=False, tmdb_api_key='af95ef8a4fe1e697f86b8c194f2e5e11'):
@@ -567,12 +566,20 @@ class MetaData:
         """ 
             Method that takes a string and returns it cleaned of any special characters
             in order to do proper string comparisons
-        """        
-        try:
-            return ''.join(e for e in string if e.isalnum())
-        except:
-            return string
+        """
+        clean_string = common.addon.get_setting('clean_up_title') == 'true'
+        cleaned_string = string
+        
+        if clean_string:        
+            try:
+                cleaned_string = ''.join(e for e in string if e.isalnum())
+            except:
+                cleaned_string = string
+        else:
+            if type(string) != type(u''):
+                cleaned_string = string.decode('utf-8', 'ignore')
 
+        return cleaned_string
 
     def _convert_date(self, string, in_format, out_format):
         ''' Helper method to convert a string date to a given format '''
@@ -923,9 +930,7 @@ class MetaData:
         '''
        
         common.addon.log('---------------------------------------------------------------------------------------', 2)
-        if type(name) != type(u''):
-            name = name.decode(self._default_encoding, 'ignore')
-        common.addon.log('Attempting to retrieve meta data for %s: %s %s %s %s' % (media_type, name.encode(self._default_encoding), year, imdb_id, tmdb_id), 2)
+        common.addon.log('Attempting to retrieve meta data for %s: %s %s %s %s' % (media_type, name, year, imdb_id, tmdb_id), 2)
  
         if imdb_id:
             imdb_id = self._valid_imdb_id(imdb_id)
@@ -1194,18 +1199,18 @@ class MetaData:
             DICT of matched meta data or None if no match.
         '''        
 
-        name =  name.lower()
+        name =  self._clean_string(name.lower())
         if media_type == self.type_movie:
             sql_select = "SELECT * FROM movie_meta WHERE title = '%s'" % name
         elif media_type == self.type_tvshow:
             sql_select = "SELECT a.*, CASE WHEN b.episode ISNULL THEN 0 ELSE b.episode END AS episode, CASE WHEN c.playcount ISNULL THEN 0 ELSE c.playcount END as playcount FROM tvshow_meta a LEFT JOIN (SELECT imdb_id, count(imdb_id) AS episode FROM episode_meta GROUP BY imdb_id) b ON a.imdb_id = b.imdb_id LEFT JOIN (SELECT imdb_id, count(imdb_id) AS playcount FROM episode_meta WHERE overlay=7 GROUP BY imdb_id) c ON a.imdb_id = c.imdb_id WHERE a.title = '%s'" % name
             if DB == 'mysql':
                 sql_select = sql_select.replace("ISNULL", "IS NULL")
-        common.addon.log('Looking up in local cache by name for: %s %s %s' % (media_type, name.encode(self._default_encoding), year), 0)
+        common.addon.log('Looking up in local cache by name for: %s %s %s' % (media_type, name.encode('utf-8'), year), 0)
         
         if year and (media_type == self.type_movie or media_type == self.type_tvshow):
             sql_select = sql_select + " AND year = %s" % year
-        common.addon.log('SQL Select: %s' % sql_select.encode(self._default_encoding), 0)
+        common.addon.log('SQL Select: %s' % sql_select.encode('utf-8'), 0)
         
         try:
             self.dbcur.execute(sql_select)            
@@ -1253,7 +1258,7 @@ class MetaData:
                     meta = meta_group
                     
                 #strip title
-                meta['title'] =  name.lower()
+                meta['title'] =  self._clean_string(name.lower())
                        
                 if meta.has_key('cast'):
                     meta['cast'] = str(meta['cast'])
@@ -1274,8 +1279,7 @@ class MetaData:
     
                 elif media_type == self.type_tvshow:
                     sql_insert = self.__insert_from_dict(table, 19)
-                    
-                    common.addon.log('SQL INSERT: %s' % sql_insert.encode(self._default_encoding), 0)
+                    common.addon.log('SQL INSERT: %s' % sql_insert, 0)
     
                     self.dbcur.execute(sql_insert, (meta['imdb_id'], meta['tvdb_id'], meta['title'], meta['year'], 
                             meta['cast'], meta['rating'], meta['duration'], meta['plot'], meta['mpaa'],
@@ -1521,13 +1525,13 @@ class MetaData:
             for show in show_list:
                 (junk1, junk2, junk3) = show
                 #if we match imdb_id or full name (with year) then we know for sure it is the right show
-                if junk3==imdb_id or self._string_compare(junk2,name):
+                if junk3==imdb_id or self._string_compare(self._clean_string(junk2),self._clean_string(name)):
                     tvdb_id=self._clean_string(junk1)
                     if not imdb_id:
                         imdb_id=self._clean_string(junk3)
                     break
                 #if we match just the cleaned name (without year) keep the tvdb_id
-                elif self._string_compare(junk2,name):
+                elif self._string_compare(self._clean_string(junk2),self._clean_string(name)):
                     prob_id = junk1
                     if not imdb_id:
                         imdb_id = self_clean_string(junk3)
@@ -1535,7 +1539,7 @@ class MetaData:
                 tvdb_id = self._clean_string(prob_id)
 
         if tvdb_id:
-            common.addon.log('Show *** ' + name.encode(self._default_encoding) + ' *** found in TVdb. Getting details...', 0)
+            common.addon.log('Show *** ' + name + ' *** found in TVdb. Getting details...', 0)
 
             try:
                 show = tvdb.get_show(tvdb_id)
@@ -1576,7 +1580,7 @@ class MetaData:
                 meta['overlay'] = 6
 
                 if meta['plot'] == 'None' or meta['plot'] == '' or meta['plot'] == 'TBD' or meta['plot'] == 'No overview found.' or meta['rating'] == 0 or meta['duration'] == 0 or meta['cover_url'] == '':
-                    common.addon.log(' Some info missing in TVdb for TVshow *** '+ name.encode(self._default_encoding) + ' ***. Will search imdb for more', 0)
+                    common.addon.log(' Some info missing in TVdb for TVshow *** '+ name + ' ***. Will search imdb for more', 0)
                     tmdb = TMDB(api_key=self.tmdb_api_key, lang=self.__get_tmdb_language())
                     imdb_meta = tmdb.search_imdb(name, imdb_id)
                     if imdb_meta:

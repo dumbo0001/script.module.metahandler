@@ -28,8 +28,6 @@ from cStringIO import StringIO
 from zipfile import ZipFile
 
 class TheTVDB(object):
-    _default_encoding = 'utf-8'
-
     def __init__(self, api_key='2B8557E0CBF7D720', language = 'en', want_raw = False):
         #http://thetvdb.com/api/<apikey>/<request>
         self.api_key = api_key
@@ -253,7 +251,9 @@ class TheTVDB(object):
     # language can be "all", "en", "fr", etc.
     def get_matching_shows(self, show_name, language=None, want_raw=False):
         """Get a list of shows matching show_name."""
-        get_args = {"seriesname": show_name.encode(self._default_encoding)}
+        if type(show_name) == type(u''):
+            show_name = show_name.encode('utf-8')
+        get_args = {"seriesname": show_name}
         if language is not None:
             get_args['language'] = language
         else:
