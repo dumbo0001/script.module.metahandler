@@ -10,6 +10,7 @@ import simplejson as simplejson
 import urllib, re
 from datetime import datetime
 import time
+import common
 from addon.common.net import Net  
 from addon.common.addon import Addon       
 from threading import Thread
@@ -39,15 +40,19 @@ class TMDB(object):
         self.imdb_nameyear_api = 'http://www.imdbapi.com/?t=%s&y=%s' 
       
     def __clean_name(self, mystring):
-        newstring = ''
-        for word in mystring.split(' '):
-            if word.isalnum()==False:
-                w = ""          
-                for i in range(len(word)):
-                    if(word[i].isalnum()):              
-                        w+=word[i]
-                word = w
-            newstring += ' ' + word
+        clean_string = common.addon.get_setting('clean_up_title') == 'true'
+        newstring = mystring
+        
+        if clean_string:
+            newstring = ''
+            for word in mystring.split(' '):
+                if word.isalnum()==False:
+                    w = ""          
+                    for i in range(len(word)):
+                        if(word[i].isalnum()):              
+                            w+=word[i]
+                    word = w
+                newstring += ' ' + word
         return newstring.strip()
 
 
